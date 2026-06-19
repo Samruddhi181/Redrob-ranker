@@ -1,0 +1,2 @@
+# No heavy dependencies required for the baseline design.
+# The implementation is intentionally standard-library friendly.

@@ -1,0 +1,22 @@
+# Shared 100K-candidate pool provided by the hackathon organizers.
+# Too large for GitHub (465MB, exceeds the 100MB file limit) and not
+# original content - the reproduce command expects it at this path
+# but it should not be committed.
+data/candidates.jsonl
+data/candidates.jsonl.gz
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+
+# Leftover empty placeholder directories from earlier setup (filesystem
+# would not let this session delete them outright). Ignoring the
+# directories specifically (trailing slash) so real files can still be
+# added at these paths later without being blocked by this rule.
+/README.md/
+/main.py/
+/work /

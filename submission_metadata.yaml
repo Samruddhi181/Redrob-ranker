@@ -1,0 +1,91 @@
+# Redrob Hackathon — Submission Metadata
+# Filled in from project review on 2026-06-18. Fields marked TODO still need
+# your input before this is upload-ready.
+
+# ============================================================================
+# Team identity
+# ============================================================================
+team_name: "TODO-pick-a-team-name"
+
+primary_contact:
+  name: "Samruddhi"
+  email: "samruddhi020202@gmail.com"
+  phone: "+1 7062409234"
+
+team_members:
+  - name: "Samruddhi"
+    email: "samruddhi020202@gmail.com"
+    role: "Solo participant"
+
+# ============================================================================
+# Code and reproducibility
+# ============================================================================
+github_repo: "TODO-https://github.com/YOUR_USERNAME/YOUR_REPO"
+# Not created yet. Required before upload — must be reachable.
+
+sandbox_link: "TODO-https://huggingface.co/spaces/YOUR_USERNAME/YOUR_SPACE"
+# Not set up yet. Required before upload. See submission_spec Section 10.5
+# for acceptable platforms (HuggingFace Spaces, Streamlit Cloud, Replit,
+# Colab, Docker, Binder).
+
+reproduce_command: "python -m src.make_submission data/job_description.docx data/candidates.jsonl outputs/submission.csv"
+# Verified: runs end-to-end in ~7 seconds, ~14MB peak RAM, no network calls,
+# deterministic output (reran and diffed byte-identical).
+
+# ============================================================================
+# Compute environment
+# ============================================================================
+compute:
+  platform: "TODO"                              # e.g. "MacBook Pro M2", "AWS EC2 c5.4xlarge"
+  cpu_cores: 0                                   # TODO: fill in your machine's core count
+  ram_gb: 0                                      # TODO: fill in your machine's RAM
+  python_version: "TODO"                         # run `python --version` on your machine
+  os: "TODO"                                     # e.g. "macOS 14.x"
+  uses_gpu_for_inference: false                  # Confirmed — code has no GPU/CUDA usage
+  has_network_during_ranking: false              # Confirmed — only stdlib imports, no API calls
+  pre_computation_required: false                # Confirmed — single end-to-end script, no precompute step
+  pre_computation_time_minutes: 0
+
+# ============================================================================
+# AI tools declaration
+# ============================================================================
+ai_tools_used:
+  - "Claude"
+  # Add any others actually used, e.g. "GitHub Copilot", "ChatGPT", "Cursor"
+
+ai_usage_summary: |
+  Used Claude (Anthropic) throughout development for architecture design,
+  code review, debugging, and drafting submission documentation. No
+  candidate data was sent to any external LLM API at ranking time — the
+  ranker and reasoning generator are rule-based, run entirely locally with
+  no network calls, satisfying the no-hosted-LLM-calls constraint.
+
+# ============================================================================
+# Approach summary
+# ============================================================================
+methodology_summary: |
+  Rule-based ranker with explicit, auditable reasoning. Every candidate in
+  the 100K pool is scored (no early filtering) on six weighted components:
+  technical/domain fit (JD keyword evidence, 25%), career evidence fit
+  (proof of having actually built ranking/retrieval/search systems, 20%),
+  production experience fit (deployment/scale signals in role descriptions,
+  20%), behavioral fit (Redrob engagement signals — response rate, interview
+  completion, recency, 15%), experience alignment to the JD's 5-9 year band
+  (10%), and logistics fit (work mode, relocation, notice period, 10%). A
+  separate honeypot-risk detector flags internally inconsistent profiles
+  (experience vs. career-history length, title seniority vs. years, skill
+  duration vs. total experience) and multiplicatively discounts their score
+  rather than hard-filtering them. Reasoning strings are template-generated
+  from each candidate's own scored facts (no LLM call), keeping output fast,
+  deterministic, and hallucination-free. Runtime is ~7 seconds for 100K
+  candidates on CPU.
+
+# ============================================================================
+# Declarations
+# ============================================================================
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true
