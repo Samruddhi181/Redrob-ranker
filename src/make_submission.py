@@ -12,15 +12,18 @@ DEBUG_FIELDNAMES = [
     "candidate_id",
     "rank",
     "score",
-    "technical_domain_fit",
+    "capability_match",
     "career_evidence_fit",
     "production_experience_fit",
     "behavioral_fit",
     "experience_alignment",
     "logistics_fit",
+    "recruiter_demand",
     "honeypot_risk",
+    "disqualifier_risk",
     "matched_evidence",
     "concerns",
+    "disqualifier_concerns",
     "reasoning",
     "manual_label",
     "manual_notes",
@@ -57,15 +60,18 @@ def write_debug_csv(debug_path: Path, rows: list[dict]) -> None:
                     "candidate_id": row["candidate_id"],
                     "rank": row["rank"],
                     "score": _format_score(row["score"]),
-                    "technical_domain_fit": _format_score(features.technical_domain_fit),
+                    "capability_match": _format_score(features.capability_match),
                     "career_evidence_fit": _format_score(features.career_evidence_fit),
                     "production_experience_fit": _format_score(features.production_experience_fit),
                     "behavioral_fit": _format_score(features.behavioral_fit),
                     "experience_alignment": _format_score(features.experience_alignment),
                     "logistics_fit": _format_score(features.logistics_fit),
+                    "recruiter_demand": _format_score(features.recruiter_demand),
                     "honeypot_risk": _format_score(features.honeypot_risk),
+                    "disqualifier_risk": _format_score(features.disqualifier_risk),
                     "matched_evidence": "; ".join(features.matched_evidence),
                     "concerns": "; ".join(features.concerns),
+                    "disqualifier_concerns": "; ".join(features.disqualifier_concerns),
                     "reasoning": row["reasoning"],
                     "manual_label": "",
                     "manual_notes": "",
@@ -84,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     output_path = Path(args[2])
 
     jd_text = read_docx_text(jd_path)
-    top = rank_candidates(jd_text, read_jsonl(candidates_path))
+    top = rank_candidates(jd_text, lambda: read_jsonl(candidates_path))
     debug_path = output_path.with_name("debug_top100.csv")
 
     write_submission_csv(output_path, top)

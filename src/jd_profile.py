@@ -10,6 +10,10 @@ class JDProfile:
     raw_text: str
     years_min: float = 0.0
     years_max: float = 50.0
+    # Fixed-vocabulary hits, kept for visibility/debugging only. The
+    # capability_match score no longer counts these directly -- it uses
+    # TF-IDF cosine similarity over the JD's full raw_text instead, which
+    # isn't limited to this fixed list (see src/tfidf.py, src/ranker.py).
     must_have_terms: list[str] = field(default_factory=list)
     good_terms: list[str] = field(default_factory=list)
     location_terms: list[str] = field(default_factory=list)
