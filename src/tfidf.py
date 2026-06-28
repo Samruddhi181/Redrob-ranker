@@ -1,17 +1,3 @@
-# Lightweight, deterministic TF-IDF + cosine similarity.
-#
-# Used to score how closely a candidate's profile text overlaps with the job
-# description's full text. This replaces the earlier approach of counting
-# exact hits against a fixed buzzword list: instead of asking "does this
-# literal word appear," it asks "how much does this candidate's vocabulary,
-# weighted by how distinctive each word is across the whole candidate pool,
-# look like the JD's vocabulary." Two profiles that both say "ranking" no
-# longer score identically regardless of context; profiles that share rare,
-# JD-specific words (e.g. "qdrant", "ndcg") score higher than profiles that
-# only share common words like "team" or "engineer."
-#
-# No external libraries (no numpy/sklearn) so this stays dependency-free,
-# fully deterministic, and auditable line by line.
 from __future__ import annotations
 
 from collections import Counter
@@ -22,9 +8,6 @@ from typing import Iterable
 
 _TOKEN_RE = re.compile(r"[a-z][a-z0-9+/.\-]*")
 
-# A short, generic stopword list -- common English function words that would
-# otherwise dominate every document's term frequency and drown out the
-# distinctive, JD-relevant vocabulary TF-IDF is meant to surface.
 STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "been", "being", "but", "by",
     "for", "from", "has", "have", "had", "if", "in", "into", "is", "it",
@@ -34,14 +17,78 @@ STOPWORDS = {
     "about", "more", "most", "across", "using", "use", "used",
 }
 
+# Maps specific tool names and phrases to canonical concept tokens, applied to
+# both the candidate profile and the JD so that e.g. "FAISS" on a profile and
+# "vector databases" in the JD both emit "concept.vectordb" and meet in cosine
+# similarity even though the literal words differ.
+CONCEPT_EXPANSIONS: dict[str, str] = {
+    "vector databases":       "concept.vectordb",
+    "vector database":        "concept.vectordb",
+    "vector store":           "concept.vectordb",
+    "vector search":          "concept.vectordb",
+    "ann index":              "concept.vectordb",
+    "faiss":                  "concept.vectordb",
+    "qdrant":                 "concept.vectordb",
+    "pinecone":               "concept.vectordb",
+    "weaviate":               "concept.vectordb",
+    "milvus":                 "concept.vectordb",
+    "chroma":                 "concept.vectordb",
+    "chromadb":               "concept.vectordb",
+    "pgvector":               "concept.vectordb",
+    "vespa":                  "concept.vectordb",
+    "information retrieval":  "concept.retrieval",
+    "dense retrieval":        "concept.retrieval",
+    "hybrid retrieval":       "concept.retrieval",
+    "hybrid search":          "concept.retrieval",
+    "semantic search":        "concept.retrieval",
+    "lexical search":         "concept.retrieval",
+    "retrieval":              "concept.retrieval",
+    "sentence-transformers":  "concept.embeddings",
+    "sentence transformers":  "concept.embeddings",
+    "text embeddings":        "concept.embeddings",
+    "openai embeddings":      "concept.embeddings",
+    "embeddings":             "concept.embeddings",
+    "embedding":              "concept.embeddings",
+    "word2vec":               "concept.embeddings",
+    "bge":                    "concept.embeddings",
+    "learning to rank":       "concept.ranking",
+    "re-ranking":             "concept.ranking",
+    "reranking":              "concept.ranking",
+    "relevance ranking":      "concept.ranking",
+    "ranking":                "concept.ranking",
+    "ranker":                 "concept.ranking",
+    "bm25":                   "concept.ranking",
+    "mean average precision": "concept.rankeval",
+    "ndcg":                   "concept.rankeval",
+    "mrr":                    "concept.rankeval",
+    "collaborative filtering": "concept.recsys",
+    "recommender systems":     "concept.recsys",
+    "recommender system":      "concept.recsys",
+    "recommendation systems":  "concept.recsys",
+    "recommendation system":   "concept.recsys",
+    "recommendation":          "concept.recsys",
+    "recommender":             "concept.recsys",
+    "fine-tuning":             "concept.finetuning",
+    "fine tuning":             "concept.finetuning",
+    "qlora":                   "concept.finetuning",
+    "lora":                    "concept.finetuning",
+    "peft":                    "concept.finetuning",
+    "rlhf":                    "concept.finetuning",
+}
+
+
+def concept_expand(text: str) -> str:
+    lower = text.lower()
+    added: set[str] = set()
+    for phrase, concept in CONCEPT_EXPANSIONS.items():
+        if phrase in lower:
+            added.add(concept)
+    if not added:
+        return text
+    return text + " " + " ".join(sorted(added))
+
 
 def tokenize(text: str) -> list[str]:
-    """Lowercase word tokens; stopwords and pure punctuation dropped.
-
-    Keeps internal hyphens/slashes/dots so multi-part terms like
-    "fine-tuning", "a/b", or "ndcg@10"-style tokens survive as one token
-    rather than being split into noise.
-    """
     if not text:
         return []
     tokens = _TOKEN_RE.findall(text.lower())
@@ -49,15 +96,8 @@ def tokenize(text: str) -> list[str]:
 
 
 class IDFModel:
-    """Inverse-document-frequency weights learned from a document corpus.
-
-    Uses "smooth" IDF -- the same formula scikit-learn's TfidfVectorizer
-    uses by default: idf(t) = ln((1 + n) / (1 + df(t))) + 1. Always
-    positive, well-defined even for a term that appears in every document,
-    and gives an explicit, sane default weight for a term that never
-    appeared in the corpus at all (treated the same as df(t) = 0 -- the
-    most distinctive possible term).
-    """
+    # Smooth IDF: ln((1+n)/(1+df)) + 1 — same formula as sklearn's TfidfVectorizer default.
+    # Always positive; unknown terms get the maximum weight (df=0).
 
     __slots__ = ("document_count", "_weights", "_default_weight")
 
@@ -74,11 +114,6 @@ class IDFModel:
 
 
 def build_idf(token_lists: Iterable[list[str]]) -> IDFModel:
-    """One streaming pass over the corpus: for each term, count how many
-    documents it appears in at least once (document frequency). Takes an
-    iterable of already-tokenized documents so the caller controls how
-    each document's text is collected and tokenized.
-    """
     doc_freq: dict[str, int] = {}
     doc_count = 0
     for tokens in token_lists:
@@ -89,13 +124,6 @@ def build_idf(token_lists: Iterable[list[str]]) -> IDFModel:
 
 
 def tfidf_vector(tokens: list[str], idf: IDFModel) -> dict[str, float]:
-    """Sparse TF-IDF vector: raw term count * corpus IDF weight.
-
-    Raw count (rather than a length-normalized count) is fine here --
-    cosine similarity divides by each vector's own norm, so any uniform
-    per-document scaling factor cancels out exactly and doesn't change the
-    result.
-    """
     if not tokens:
         return {}
     counts = Counter(tokens)
@@ -103,8 +131,6 @@ def tfidf_vector(tokens: list[str], idf: IDFModel) -> dict[str, float]:
 
 
 def cosine_similarity(vec_a: dict[str, float], vec_b: dict[str, float]) -> float:
-    """Cosine similarity between two sparse vectors, in [0, 1] for the
-    non-negative TF-IDF weights produced above."""
     if not vec_a or not vec_b:
         return 0.0
     if len(vec_a) > len(vec_b):

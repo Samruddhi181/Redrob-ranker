@@ -1,11 +1,8 @@
-# Redrob Hackathon — Submission Metadata
-# Filled in from project review on 2026-06-18. Fields marked TODO still need
-# your input before this is upload-ready.
 
 # ============================================================================
 # Team identity
 # ============================================================================
-team_name: "TODO-pick-a-team-name"
+team_name: "OneByte"
 
 primary_contact:
   name: "Samruddhi Sali"
@@ -21,36 +18,20 @@ team_members:
 # Code and reproducibility
 # ============================================================================
 github_repo: "TODO-https://github.com/YOUR_USERNAME/YOUR_REPO"
-# Not created yet. Required before upload — must be reachable.
 
 sandbox_link: "TODO-https://huggingface.co/spaces/YOUR_USERNAME/YOUR_SPACE"
-# Not set up yet. Required before upload. See submission_spec Section 10.5
-# for acceptable platforms (HuggingFace Spaces, Streamlit Cloud, Replit,
-# Colab, Docker, Binder).
 
 reproduce_command: "python -m src.make_submission data/job_description.docx data/candidates.jsonl outputs/submission.csv"
-# Verified: runs end-to-end in ~40 seconds, ~14MB peak RAM, no network calls,
-# deterministic output (reran and diffed byte-identical). Runtime roughly
-# doubled from the earlier ~14s after switching capability_match to
-# TF-IDF: scoring now requires two streaming passes over the 100K-candidate
-# file instead of one -- one pass to learn corpus-wide IDF weights, one to
-# score everyone -- so neither pass holds more than one candidate (plus the
-# IDF vocabulary) in memory, which is why peak RAM is unchanged. Runtime
-# rose again (~28s -> ~37s) after adding the builder-phrase regex scan to
-# career_evidence_fit (still one pass, just more regex work per candidate),
-# and again to ~40s after rebuilding behavioral_fit. Adding the
-# recruiter_demand dimension didn't move runtime further -- it's just three
-# O(1) dict lookups and a divide per candidate, no new regex or extra pass.
 
 # ============================================================================
 # Compute environment
 # ============================================================================
 compute:
-  platform: "TODO"                              # e.g. "MacBook Pro M2", "AWS EC2 c5.4xlarge"
-  cpu_cores: 0                                   # TODO: fill in your machine's core count
-  ram_gb: 0                                      # TODO: fill in your machine's RAM
-  python_version: "TODO"                         # run `python --version` on your machine
-  os: "TODO"                                     # e.g. "macOS 14.x"
+  platform: "Macbook Air M4"                              # e.g. "MacBook Pro M2", "AWS EC2 c5.4xlarge"
+  cpu_cores: 10                                   # TODO: fill in your machine's core count
+  ram_gb: 16                                      # TODO: fill in your machine's RAM
+  python_version: "3.11.5"                         # run `python --version` on your machine
+  os: macOS 26.1                                     # e.g. "macOS 14.x"
   uses_gpu_for_inference: false                  # Confirmed — code has no GPU/CUDA usage
   has_network_during_ranking: false              # Confirmed — only stdlib imports, no API calls
   pre_computation_required: false                # Confirmed — single end-to-end script, no precompute step
@@ -61,7 +42,8 @@ compute:
 # ============================================================================
 ai_tools_used:
   - "Claude"
-  # Add any others actually used, e.g. "GitHub Copilot", "ChatGPT", "Cursor"
+  - "ChatGPT"
+  
 
 ai_usage_summary: |
   Used Claude (Anthropic) throughout development for architecture design,
@@ -74,51 +56,24 @@ ai_usage_summary: |
 # Approach summary
 # ============================================================================
 methodology_summary: |
-  Rule-based ranker with explicit, auditable reasoning. Every candidate in
-  the 100K pool is scored (no early filtering) on seven weighted components:
-  capability match (TF-IDF cosine similarity between the candidate's
-  profile text and the JD's full text, with IDF weights learned from the
-  100K-candidate pool itself, 18%), career evidence fit
-  (proof of having actually built ranking/retrieval/search systems, weighted
-  by how rare/distinctive each matched signal term is in the candidate pool
-  rather than counting every exact match the same -- plus a steep bonus
-  when a builder verb and a JD-relevant noun appear together a few words
-  apart in the candidate's own career history, summary, or headline, e.g.
-  "Built candidate recommendation engine", since that's a far rarer and
-  more specific claim than either a builder verb or a domain term alone,
-  18%), production
-  experience fit (deployment/scale signals in role descriptions, same
-  IDF-weighted matching, 18%), behavioral fit (18%, raised from an earlier
-  15% and rebuilt as three equal parts -- activity, response, reliability --
-  directly off the JD's own closing instruction that a candidate inactive
-  for 6 months with a 5% recruiter response rate is "not actually
-  available" and should be down-weighted; activity decays recency of
-  last_active_date to zero at that same 6-month mark, anchored to the most
-  recent last_active_date seen anywhere in the 100K-candidate pool rather
-  than wall-clock time so the score stays fully reproducible regardless of
-  when the script is re-run), experience alignment
-  to the JD's 5-9 year band (9%), logistics fit (work mode, relocation,
-  notice period, 9%), and recruiter demand (saved_by_recruiters_30d,
-  profile_views_received_30d, search_appearance_30d -- signals *other*
-  recruiters already generated about this candidate, which none of the
-  other six dimensions can see; equal-weighted average of the three, each
-  normalized against its own field's 95th-percentile value across the
-  100K-candidate pool rather than its raw max, since these are unbounded
-  right-skewed counts where a couple of extreme outliers would otherwise
-  compress everyone else toward 0, 10%). The other six dimensions each gave
-  up their share of that 10% proportionally (20/20/20/20/10/10 ->
-  18/18/18/18/9/9) when recruiter demand was added. A
-  separate honeypot-risk detector flags internally inconsistent profiles
-  (experience vs. career-history length, title seniority vs. years, skill
-  duration vs. total experience, high recruiter saves paired with a near-zero
-  response rate) and multiplicatively discounts their score
-  rather than hard-filtering them. Reasoning strings are template-generated
-  from each candidate's own scored facts (no LLM call): each one leads with
-  whatever dimension that candidate actually scores strongest on, names the
-  specific evidence behind it, and honestly surfaces the candidate's own
-  weakest dimension or honeypot concern when one is present — never a
-  fabricated weakness, and never the same templated shape twice. Runtime is
-  ~40 seconds for 100K candidates on CPU.
+  Our approach is a hybrid of information retrieval and rule-based scoring.
+  We first extract structured facts from the job description and candidate
+  profiles, then score each candidate across seven dimensions. The scoring
+  is deterministic, reproducible, and does not rely on any external LLMs at
+  ranking time. We also generate reasoning strings for each candidate based
+  on their own extracted facts, providing transparency into the scoring
+  process.
+  We score every candidate in the 100K pool (no early filtering) across seven
+  dimensions, TF-IDF cosine similarity against the JD (10%), career evidence
+  (25%) — distinguishing candidates who built ranking/retrieval/search systems
+  from those merely familiar with them, production experience (19%), behavioral
+  fit (18%) based on activity, recruiter response rate, and interview completion,
+  experience alignment to the 5-9 year band (9%), logistics fit (9%), and
+  recruiter demand from platform signals (10%). Profiles with internal
+  inconsistencies (inflated titles, impossible skill durations) get a
+  multiplicative honeypot discount rather than hard rejection. Reasoning
+  strings are template-generated from each candidate's own extracted facts —
+  no LLM calls at ranking time.
 
 # ============================================================================
 # Declarations
