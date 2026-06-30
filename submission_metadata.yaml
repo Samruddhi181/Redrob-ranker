@@ -17,9 +17,9 @@ team_members:
 # ============================================================================
 # Code and reproducibility
 # ============================================================================
-github_repo: "TODO-https://github.com/YOUR_USERNAME/YOUR_REPO"
+github_repo: "https://github.com/Samruddhi181/Redrob-ranker"
 
-sandbox_link: "TODO-https://huggingface.co/spaces/YOUR_USERNAME/YOUR_SPACE"
+sandbox_link: "https://huggingface.co/spaces/Samruddhi05/candidate-ranker"
 
 reproduce_command: "python -m src.make_submission data/job_description.docx data/candidates.jsonl outputs/submission.csv"
 
@@ -27,14 +27,14 @@ reproduce_command: "python -m src.make_submission data/job_description.docx data
 # Compute environment
 # ============================================================================
 compute:
-  platform: "Macbook Air M4"                              # e.g. "MacBook Pro M2", "AWS EC2 c5.4xlarge"
-  cpu_cores: 10                                   # TODO: fill in your machine's core count
-  ram_gb: 16                                      # TODO: fill in your machine's RAM
-  python_version: "3.11.5"                         # run `python --version` on your machine
-  os: macOS 26.1                                     # e.g. "macOS 14.x"
-  uses_gpu_for_inference: false                  # Confirmed — code has no GPU/CUDA usage
-  has_network_during_ranking: false              # Confirmed — only stdlib imports, no API calls
-  pre_computation_required: false                # Confirmed — single end-to-end script, no precompute step
+  platform: "MacBook Air M4"
+  cpu_cores: 10
+  ram_gb: 16
+  python_version: "3.11.5"
+  os: "macOS 26.1"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: false
   pre_computation_time_minutes: 0
 
 # ============================================================================
@@ -56,15 +56,8 @@ ai_usage_summary: |
 # Approach summary
 # ============================================================================
 methodology_summary: |
-  Our approach is a hybrid of information retrieval and rule-based scoring.
-  We first extract structured facts from the job description and candidate
-  profiles, then score each candidate across seven dimensions. The scoring
-  is deterministic, reproducible, and does not rely on any external LLMs at
-  ranking time. We also generate reasoning strings for each candidate based
-  on their own extracted facts, providing transparency into the scoring
-  process.
   We score every candidate in the 100K pool (no early filtering) across seven
-  dimensions, TF-IDF cosine similarity against the JD (10%), career evidence
+  dimensions: TF-IDF cosine similarity against the JD (10%), career evidence
   (25%) — distinguishing candidates who built ranking/retrieval/search systems
   from those merely familiar with them, production experience (19%), behavioral
   fit (18%) based on activity, recruiter response rate, and interview completion,
