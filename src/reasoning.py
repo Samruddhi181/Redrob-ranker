@@ -14,6 +14,14 @@ def _collect_profile_text(candidate: dict[str, Any]) -> str:
     return " ".join(parts).lower()
 
 
+def _most_recent_company(candidate: dict[str, Any]) -> str | None:
+    roles = candidate.get("career_history") or []
+    if not roles:
+        return None
+    company = roles[0].get("company", "").strip()
+    return company if company else None
+
+
 def _domain_phrase(candidate: dict[str, Any]) -> str:
     text = _collect_profile_text(candidate)
     if "recommendation" in text and ("retrieval" in text or "ranking" in text):
@@ -42,6 +50,9 @@ def _opening_sentence(candidate: dict[str, Any], features) -> str:
     title = profile.get("current_title") or "Engineer"
     years = features.years_of_experience
     domain = _domain_phrase(candidate)
+    company = _most_recent_company(candidate)
+    if company:
+        return f"{title} with {years:.1f} years of experience in {domain}, most recently at {company}."
     return f"{title} with {years:.1f} years of experience in {domain}."
 
 
@@ -56,7 +67,7 @@ _DOMAIN_LABELS: dict[str, str] = {
 }
 
 
-def _evidence_domains(evidence: list[str]) -> str:
+def _top_domains(evidence: list[str], limit: int = 3) -> list[str]:
     seen: set[str] = set()
     found: list[str] = []
     for d in evidence:
@@ -64,41 +75,49 @@ def _evidence_domains(evidence: list[str]) -> str:
         if label and label not in seen:
             seen.add(label)
             found.append(label)
-    if not found:
+        if len(found) == limit:
+            break
+    return found
+
+
+def _domains_phrase(domains: list[str]) -> str:
+    if not domains:
         return ""
-    if len(found) == 1:
-        return found[0]
-    return ", ".join(found[:-1]) + " and " + found[-1]
+    if len(domains) == 1:
+        return domains[0]
+    return ", ".join(domains[:-1]) + " and " + domains[-1]
 
 
-def _evidence_and_behavioral_sentence(candidate: dict[str, Any], features) -> str:
-    evidence = features.matched_evidence
+def _evidence_sentence(features) -> str:
+    domains = _top_domains(features.matched_evidence)
+    if not domains:
+        return "Career history shows relevant technical experience."
+    phrase = _domains_phrase(domains)
+    career_evidence = features.career_evidence_fit
+    if career_evidence >= 0.65:
+        return f"Has hands-on experience building {phrase} systems."
+    if career_evidence >= 0.35:
+        return f"Career history includes work on {phrase} systems."
+    return f"Some exposure to {phrase} in past roles."
+
+
+def _behavioral_sentence(candidate: dict[str, Any], features) -> str:
     signals = candidate.get("redrob_signals", {})
-
     response_rate = float(signals.get("recruiter_response_rate") or 0.0) * 100
     open_to_work = bool(signals.get("open_to_work_flag"))
     last_active = signals.get("last_active_date")
 
-    domains = _evidence_domains(evidence)
-    if domains:
-        ev_part = f"Career history includes work on {domains}-related systems"
-    else:
-        ev_part = "Career history includes relevant technical experience"
-
     if response_rate >= 70 and open_to_work:
-        beh = "the candidate maintains a strong recruiter response rate and recent platform activity"
-    elif response_rate >= 70:
-        beh = f"the candidate maintains a strong recruiter response rate ({response_rate:.0f}%)"
-    elif open_to_work and last_active:
-        beh = f"the candidate is active on the platform as of {last_active} and flagged open to work"
-    elif open_to_work:
-        beh = "the candidate is flagged open to work"
-    elif response_rate >= 40:
-        beh = f"recruiter response rate is {response_rate:.0f}%"
-    else:
-        beh = f"recruiter response rate is low ({response_rate:.0f}%)"
-
-    return f"{ev_part}, and {beh}."
+        return "Actively available with a strong recruiter response rate."
+    if response_rate >= 70:
+        return f"Strong recruiter response rate ({response_rate:.0f}%)."
+    if open_to_work and last_active:
+        return f"Active on the platform as of {last_active} and open to work."
+    if open_to_work:
+        return "Flagged open to work."
+    if response_rate >= 40:
+        return f"Recruiter response rate is {response_rate:.0f}%."
+    return f"Low recruiter response rate ({response_rate:.0f}%) — may be harder to reach."
 
 
 def _concern_sentence(candidate: dict[str, Any], features) -> str | None:
@@ -129,7 +148,8 @@ def _concern_sentence(candidate: dict[str, Any], features) -> str | None:
 def build_reasoning(candidate: dict[str, Any], features) -> str:
     parts = [
         _opening_sentence(candidate, features),
-        _evidence_and_behavioral_sentence(candidate, features),
+        _evidence_sentence(features),
+        _behavioral_sentence(candidate, features),
     ]
     concern = _concern_sentence(candidate, features)
     if concern:
