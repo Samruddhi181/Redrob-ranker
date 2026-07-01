@@ -21,7 +21,7 @@ github_repo: "https://github.com/Samruddhi181/Redrob-ranker"
 
 sandbox_link: "https://huggingface.co/spaces/Samruddhi05/candidate-ranker"
 
-reproduce_command: "python -m src.make_submission data/job_description.docx data/candidates.jsonl outputs/submission.csv"
+reproduce_command: "python3 -m src.make_submission data/job_description.docx data/candidates.jsonl outputs/samruddhi0104_5844.csv"
 
 # ============================================================================
 # Compute environment

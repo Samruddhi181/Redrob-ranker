@@ -40,9 +40,9 @@ Recruiter demand: captures what other recruiters already think of this candidate
 
 Two risk signals multiply down the final score rather than hard-filtering candidates:
 
-**Honeypot risk** flags internally inconsistent profiles — experience vs. career history length, title seniority vs. years claimed, expert proficiency on skills with near-zero months of use. These get a steeper penalty (up to 65%) because fabricated data is worse than a poor fit.
+Honeypot risk flags internally inconsistent profiles — experience vs. career history length, title seniority vs. years claimed, expert proficiency on skills with near-zero months of use. These get a steeper penalty (up to 65%) because fabricated data is worse than a poor fit.
 
-**Disqualifier risk** flags JD-specific mismatches — consulting-only careers, LLM framework experience without retrieval depth, title-chasing patterns, candidates based outside India who aren't open to relocating. These get a softer penalty (up to 40%) since they're preferences, not hard rejections.
+Disqualifier risk flags JD-specific mismatches — consulting-only careers, LLM framework experience without retrieval depth, title-chasing patterns, candidates based outside India who aren't open to relocating. These get a softer penalty (up to 40%) since they're preferences, not hard rejections.
 
 ---
 
